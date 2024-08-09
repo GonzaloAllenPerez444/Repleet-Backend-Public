@@ -81,8 +81,8 @@ namespace Repleet.Tests.IntegrationTests
         [Fact]
         public async Task Get_Next_Problem_Returns_Problem_in_DB() {
 
-            //TODO make sure that this next problem is correct, pretty straightforward getter.
-            //seed with SeedDatabase.Initialize(db);
+            //make sure that this next problem is correct, pretty straightforward getter.
+            
             using (var scope = _factory.Services.CreateScope())
             {
 

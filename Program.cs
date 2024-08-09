@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using Repleet.Data;
+using Repleet.Models.Entities;
+using Swashbuckle.AspNetCore.Filters;
 
 var builder = WebApplication.CreateBuilder(args); 
 
@@ -9,21 +12,32 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(connectionString));
+
+
+
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
-    .AddEntityFrameworkStores<ApplicationDbContext>();
+builder.Services.AddAuthorization();
 
-
+builder.Services.AddIdentityApiEndpoints<ApplicationUser>().AddEntityFrameworkStores<ApplicationDbContext>();
 
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(
-    c =>
+    options =>
     {
-        c.SwaggerDoc("v1", new OpenApiInfo { Title = "Repleet API", Version = "v1" });
+        options.AddSecurityDefinition("oath2", new OpenApiSecurityScheme
+        {
+            In = ParameterLocation.Header,
+            Name = "Authorization",
+            Type = SecuritySchemeType.ApiKey,
+
+        });
+        options.SwaggerDoc("v1", new OpenApiInfo { Title = "Repleet API", Version = "v1" });
+        options.OperationFilter<SecurityRequirementsOperationFilter>(); 
     });
+
 
 
 // Configure logging
@@ -39,6 +53,7 @@ app.UseRouting();
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 
+app.MapIdentityApi<ApplicationUser>();
 
 
 app.UseAuthorization();

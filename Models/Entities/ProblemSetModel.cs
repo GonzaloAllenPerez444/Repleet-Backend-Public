@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Identity;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -43,5 +44,10 @@ namespace Repleet.Models.Entities
         public List<Category> Categories { get; set; } //used to be ICollection
 
 
+    }
+    public class ApplicationUser : IdentityUser
+    {
+        public int? ProblemSetId { get; set; }
+        public ProblemSet ProblemSet { get; set; }
     }
 }
