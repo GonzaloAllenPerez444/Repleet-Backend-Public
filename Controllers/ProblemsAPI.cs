@@ -77,10 +77,23 @@ namespace Repleet.Controllers
          * This function takes in the ID of a problemset in the DB, loads it into the ProblemPickerService, and calculates the 
          * next problem to show to user from that.returns the info the front end needs to display problem on a card.
          */
-        public async Task<IActionResult> GetNextProblem(int problemSetID)
+        public async Task<IActionResult> GetNextProblem()
 
         {
             
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+
+            // Fetch the user from the database
+            var user = await dbContext.Users
+                .Include(u => u.ProblemSet) // Include the ProblemSet to avoid a second query
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+
+            int? problemSetID = user.ProblemSetId; // Get the current user's problemSetID
+
+            //TODO ADD TESTS FOR IF IT'S NULL
+
             //just grab problemSet from DB with both it's categories and problems
             var MyProblemSet = await dbContext.ProblemSets
             .Include(ps => ps.Categories)
