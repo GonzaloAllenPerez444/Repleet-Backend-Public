@@ -124,7 +124,16 @@ namespace Repleet.Controllers
          */
         public async Task<IActionResult> SubmitProblem(SubmitProblemRequestDTO SPR) {
 
-            int problemSetID = SPR.problemSetID;
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+
+            // Fetch the user from the database
+            var user = await dbContext.Users
+                .Include(u => u.ProblemSet) // Include the ProblemSet to avoid a second query
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+
+            int? problemSetID = user.ProblemSetId; // Get the current user's problemSetID
                 
             string ProblemName = SPR.ProblemName;
                 
@@ -148,6 +157,7 @@ namespace Repleet.Controllers
             MyProblemSet.Categories = UpdatedProblemSet.Categories;
 
             await dbContext.SaveChangesAsync();
+ 
 
             Category matchingCategory = MyProblemSet.Categories.Where(c => c.Name == CategoryName).FirstOrDefault(); //returns null if not found
             

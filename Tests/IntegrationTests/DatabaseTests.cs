@@ -153,7 +153,7 @@ namespace Repleet.Tests.IntegrationTests
                 db.Database.EnsureDeleted();
                 db.Database.EnsureCreated(); //this should delete any existing data in the db and replace it with a blank db
 
-                SubmitProblemRequestDTO request = new SubmitProblemRequestDTO(1, "Car Fleet", "Stack", SkillLevel.lacking);
+                SubmitProblemRequestDTO request = new SubmitProblemRequestDTO( "Car Fleet", "Stack", SkillLevel.lacking);
 
                 var response = await _httpClient.PostAsJsonAsync<SubmitProblemRequestDTO>("/api/ProblemsAPI/submitproblem",request);
 
@@ -187,7 +187,7 @@ namespace Repleet.Tests.IntegrationTests
 
                 SeedDatabase.InitializeTestDB(db);
 
-                SubmitProblemRequestDTO request = new SubmitProblemRequestDTO(1, "Car Fleet", "Stack", SkillLevel.lacking);
+                SubmitProblemRequestDTO request = new SubmitProblemRequestDTO( "Car Fleet", "Stack", SkillLevel.lacking);
 
                 var response = await _httpClient.PostAsJsonAsync<SubmitProblemRequestDTO>("/api/ProblemsAPI/submitproblem", request);
 

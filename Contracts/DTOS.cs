@@ -19,6 +19,6 @@ namespace Repleet.Contracts
 
         );
     public record SubmitProblemRequestDTO(
-        int problemSetID, string ProblemName, string CategoryName, SkillLevel Report
+         string ProblemName, string CategoryName, SkillLevel Report
         );
 }
