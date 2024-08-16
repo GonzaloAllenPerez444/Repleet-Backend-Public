@@ -48,6 +48,8 @@ namespace Repleet.Data
                 .HasMany(ps => ps.Categories)
                 .WithOne()
                 .HasForeignKey("ProblemSetId"); //this part is just for clarity
+
+            modelBuilder.HasDefaultSchema("identity");
                 
 
            

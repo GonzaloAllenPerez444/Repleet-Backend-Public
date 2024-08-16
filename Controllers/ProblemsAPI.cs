@@ -57,7 +57,7 @@ namespace Repleet.Controllers
             return new JsonResult(Ok(defaultProblemSet.ProblemSetId));
             
         }
-        [Authorize]
+        //[Authorize]
         [HttpGet("getnextproblem")]
         /* 
          * This function takes in the ID of a problemset in the DB, loads it into the ProblemPickerService, and calculates the 
@@ -89,7 +89,7 @@ namespace Repleet.Controllers
             return new JsonResult(Ok(NextProblemDTO));
 
         }
-        [Authorize]
+        //[Authorize]
         [HttpPost("submitproblem")]
         /*
          * This function takes in the PSID, Problem Name, Category Name, and report of how well a user did on the problem.

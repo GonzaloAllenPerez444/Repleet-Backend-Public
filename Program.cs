@@ -23,11 +23,14 @@ builder.Services.AddIdentityApiEndpoints<ApplicationUser>().AddEntityFrameworkSt
 
 
 builder.Services.AddControllers();
+
 builder.Services.AddEndpointsApiExplorer();
+
+
 builder.Services.AddSwaggerGen(
     options =>
     {
-        options.AddSecurityDefinition("oath2", new OpenApiSecurityScheme
+        options.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
         {
             In = ParameterLocation.Header,
             Name = "Authorization",
@@ -55,7 +58,7 @@ app.UseStaticFiles();
 
 app.MapIdentityApi<ApplicationUser>();
 
-
+app.UseAuthentication();
 app.UseAuthorization();
 
 // Configure the HTTP request pipeline.
