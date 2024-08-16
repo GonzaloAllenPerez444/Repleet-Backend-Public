@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using System.Linq;
 using Repleet.Contracts;
 using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace Repleet.Controllers
 {
@@ -35,6 +36,8 @@ namespace Repleet.Controllers
         public async Task<IActionResult> SubmitRatings(RatingRequestDTO sliderValuesRequest)
 
         {
+            
+
             string sliderValues = sliderValuesRequest.RatingList;
             
             System.Collections.Generic.List<int> ratings = sliderValues.Split(',')
@@ -54,10 +57,21 @@ namespace Repleet.Controllers
 
             await dbContext.SaveChangesAsync();
 
+            //Get User that's pinging the endpoint
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            // Find the user and update their ProblemSetID
+            var userFromDB = await dbContext.Users.FindAsync(userId);
+
+            userFromDB.ProblemSetId = defaultProblemSet.ProblemSetId;
+
+            dbContext.Users.Update(userFromDB);
+            await dbContext.SaveChangesAsync();
+
             return new JsonResult(Ok(defaultProblemSet.ProblemSetId));
             
         }
-        //[Authorize]
+        [Authorize]
         [HttpGet("getnextproblem")]
         /* 
          * This function takes in the ID of a problemset in the DB, loads it into the ProblemPickerService, and calculates the 
@@ -89,7 +103,7 @@ namespace Repleet.Controllers
             return new JsonResult(Ok(NextProblemDTO));
 
         }
-        //[Authorize]
+        [Authorize]
         [HttpPost("submitproblem")]
         /*
          * This function takes in the PSID, Problem Name, Category Name, and report of how well a user did on the problem.
