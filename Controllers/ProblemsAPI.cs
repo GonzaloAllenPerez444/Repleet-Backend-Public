@@ -36,7 +36,22 @@ namespace Repleet.Controllers
         public async Task<IActionResult> SubmitRatings(RatingRequestDTO sliderValuesRequest)
 
         {
-            
+
+            var userIdBefore = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+
+            // Fetch the user from the database
+            var userBefore = await dbContext.Users
+                .Include(u => u.ProblemSet) // Include the ProblemSet to avoid a second query
+                .FirstOrDefaultAsync(u => u.Id == userIdBefore);
+
+
+            int? problemSetIDBefore = userBefore.ProblemSetId; // Get the current user's problemSetID
+
+            if (problemSetIDBefore != null) { return new JsonResult(Ok("Problem Already Exists For User")); }
+
+
+            //ok now that we've confirmed they don't already have a PS, let's make them one.
 
             string sliderValues = sliderValuesRequest.RatingList;
             

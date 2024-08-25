@@ -5,6 +5,7 @@ using Microsoft.OpenApi.Models;
 using Repleet.Data;
 using Repleet.Models.Entities;
 using Swashbuckle.AspNetCore.Filters;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args); 
 
@@ -57,6 +58,18 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.MapIdentityApi<ApplicationUser>();
+
+app.MapPost("/logout", async (SignInManager<ApplicationUser> signInManager ) =>
+{
+    await signInManager.SignOutAsync();
+    return Results.Ok();
+}).RequireAuthorization();
+
+app.MapGet("/pingauth", (ClaimsPrincipal user) =>
+{
+    var email = user.FindFirstValue(ClaimTypes.Email); //get user email from claim
+    return Results.Json(new { Email = email }); //return that email as plain text response.
+}).RequireAuthorization();
 
 app.UseAuthentication();
 app.UseAuthorization();
