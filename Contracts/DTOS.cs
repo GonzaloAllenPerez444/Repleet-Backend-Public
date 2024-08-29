@@ -21,4 +21,14 @@ namespace Repleet.Contracts
     public record SubmitProblemRequestDTO(
          string ProblemName, string CategoryName, SkillLevel Report
         );
+
+    public record ProblemSetProgressResponseDTO(
+        Dictionary<string, int> Data
+        )
+    {
+        public static implicit operator ProblemSetProgressResponseDTO(Dictionary<string, int> v)
+        {
+            throw new NotImplementedException();
+        }
+    }
 }
