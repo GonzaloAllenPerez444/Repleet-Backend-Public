@@ -19,7 +19,7 @@ namespace Repleet.Controllers
     [ApiController]
     public class ProblemsAPIController : Controller
     {
-        private readonly ApplicationDbContext dbContext; //this may need to be APIContext instead, we'll see
+        private readonly ApplicationDbContext dbContext; 
         private readonly ILogger<ProblemsAPIController> _logger;
         public ProblemsAPIController(ApplicationDbContext dbContext, ILogger<ProblemsAPIController> logger)
         {
@@ -36,8 +36,10 @@ namespace Repleet.Controllers
         public async Task<IActionResult> SubmitRatings(RatingRequestDTO sliderValuesRequest)
 
         {
+            var y = User.Identity;
+            var matchingIdentity = User.FindFirst(ClaimTypes.NameIdentifier);
 
-            var userIdBefore = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userIdBefore = User.FindFirst(ClaimTypes.NameIdentifier).Value;
 
 
             // Fetch the user from the database
@@ -104,6 +106,8 @@ namespace Repleet.Controllers
 
 
             // Fetch the user from the database
+            
+
             var user = await dbContext.Users
                 .Include(u => u.ProblemSet) // Include the ProblemSet to avoid a second query
                 .FirstOrDefaultAsync(u => u.Id == userId);

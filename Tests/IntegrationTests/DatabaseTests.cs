@@ -1,13 +1,17 @@
 ﻿using Azure;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NuGet.Protocol;
 using Repleet.Contracts;
+using Repleet.Controllers;
 using Repleet.Data;
 using Repleet.Models;
+using Repleet.Models.Entities;
 using Repleet.Services;
 using System.Net;
+using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
@@ -45,12 +49,36 @@ namespace Repleet.Tests.IntegrationTests
                 
                 db.Database.EnsureCreated();
                // db.Database.Migrate();
-               //this would apply all the migrations of the project, which isn't necessary since i just want it from the schema.
+               //^this would apply all the migrations of the project, which isn't necessary since i just want it from the schema.
                
 
                 RatingRequestDTO request = new RatingRequestDTO("5,3,3,3,3,1,1,1,1,1,2,2,2,2,2,4,4,5");
 
+                //Create New User in DB with nothing
+                
+                
 
+                // Create a new user
+                var testUser = new ApplicationUser
+                {
+                    UserName = "testuser@example.com",
+                    Email = "testuser@example.com",
+                    ProblemSetId = null, // Maybe needs to be a number, idk why though?
+                   
+                };
+                testUser.Id = "test-user-id";
+
+                // Use the PasswordHasher to hash the password
+                var passwordHasher = new PasswordHasher<ApplicationUser>();
+                testUser.PasswordHash = passwordHasher.HashPassword(testUser, "TestPassword123!");
+
+                // Add the user to the context and save changes
+                db.Users.Add(testUser);
+                db.SaveChanges();
+
+
+
+                //Do I need to add the initial user in the dbcontext or something
 
                 var response = await _httpClient.PostAsJsonAsync("/api/ProblemsAPI/submitratings", request);
 
@@ -69,6 +97,8 @@ namespace Repleet.Tests.IntegrationTests
                 var value = valueProperty.GetInt32(); //change to be more specific if we swithc to UUIDs later.
                 Assert.True(value >= 0, "Value should be a non-negative number.");
 
+                //clean up
+                db.Database.EnsureDeleted();
 
             };//end scope
 
@@ -93,9 +123,26 @@ namespace Repleet.Tests.IntegrationTests
                 db.Database.EnsureCreated();
                 
                 SeedDatabase.InitializeTestDB(db);
+                //this creates problemSets with ID 1,2,3 and User with PsetId 2 and problemSet linked to 2
 
 
-                var response = await _httpClient.GetAsync("/api/ProblemsAPI/getnextproblem?problemSetID=2");
+                //"Users" doesn't seem to have the stuff though, lets try adding it here too.
+                // Create a new user
+                var testUser = new ApplicationUser
+                {
+                    UserName = "testuser@example.com",
+                    Email = "testuser@example.com",
+                    ProblemSetId = null, // Maybe needs to be a number, idk why though?
+
+                };
+                testUser.Id = "test-user-id";
+                testUser.ProblemSetId = 2;
+                // Add the user to the context and save changes
+                db.Users.Add(testUser);
+                db.SaveChanges();
+
+
+                var response = await _httpClient.GetAsync("/api/ProblemsAPI/getnextproblem");
 
                 response.EnsureSuccessStatusCode();
 
@@ -122,8 +169,22 @@ namespace Repleet.Tests.IntegrationTests
 
                 db.Database.EnsureDeleted();
                 db.Database.EnsureCreated(); //this should delete any existing data in the db and replace it with a blank db
+                //"Users" doesn't seem to have the stuff though, lets try adding it here too.
+                // Create a new user
+                var testUser = new ApplicationUser
+                {
+                    UserName = "testuser@example.com",
+                    Email = "testuser@example.com",
+                    ProblemSetId = null, // Maybe needs to be a number, idk why though?
 
-                var response = await _httpClient.GetAsync("/api/ProblemsAPI/getnextproblem?problemSetID=2");
+                };
+                testUser.Id = "test-user-id";
+                
+                // Add the user to the context and save changes
+                db.Users.Add(testUser);
+                db.SaveChanges();
+
+                var response = await _httpClient.GetAsync("/api/ProblemsAPI/getnextproblem");
 
                 response.EnsureSuccessStatusCode();
 
@@ -154,6 +215,19 @@ namespace Repleet.Tests.IntegrationTests
                 db.Database.EnsureCreated(); //this should delete any existing data in the db and replace it with a blank db
 
                 SubmitProblemRequestDTO request = new SubmitProblemRequestDTO( "Car Fleet", "Stack", SkillLevel.lacking);
+
+                // Create a new user
+                var testUser = new ApplicationUser
+                {
+                    UserName = "testuser@example.com",
+                    Email = "testuser@example.com",
+                    ProblemSetId = null, // Maybe needs to be a number, idk why though?
+
+                };
+                testUser.Id = "test-user-id";
+                // Add the user to the context and save changes
+                db.Users.Add(testUser);
+                db.SaveChanges();
 
                 var response = await _httpClient.PostAsJsonAsync<SubmitProblemRequestDTO>("/api/ProblemsAPI/submitproblem",request);
 
@@ -189,6 +263,21 @@ namespace Repleet.Tests.IntegrationTests
 
                 SubmitProblemRequestDTO request = new SubmitProblemRequestDTO( "Car Fleet", "Stack", SkillLevel.lacking);
 
+                // Create a new user
+                var testUser = new ApplicationUser
+                {
+                    UserName = "testuser@example.com",
+                    Email = "testuser@example.com",
+                    ProblemSetId = null, // Maybe needs to be a number, idk why though?
+
+                };
+                testUser.Id = "test-user-id";
+                testUser.ProblemSetId = 2;
+                // Add the user to the context and save changes
+                db.Users.Add(testUser);
+                db.SaveChanges();
+
+
                 var response = await _httpClient.PostAsJsonAsync<SubmitProblemRequestDTO>("/api/ProblemsAPI/submitproblem", request);
 
                 response.EnsureSuccessStatusCode();
@@ -208,16 +297,20 @@ namespace Repleet.Tests.IntegrationTests
 
 
 
-
+                    
 
                 }
+                //clean up
+                db.Database.EnsureDeleted();
 
-                
+
 
             }
 
 
         }
+
+        //TODO Integration Test for GetCategoryProcess
 
 
 

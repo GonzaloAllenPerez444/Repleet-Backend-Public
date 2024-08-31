@@ -9,10 +9,33 @@ public class SeedDatabase
 {
 
     public static void InitializeTestDB(ApplicationDbContext context)
+
+        
     {
         //add and save index if you switch to a real db for integration tests
         foreach (ProblemSet p in GenerateProblemSets()){
-        
+
+            //for now, I'll just create 1 test user attached to problem set 2.
+            if (p.ProblemSetId == 2)
+            {
+                // Create a new user
+                var testUser = new ApplicationUser
+                {
+                    UserName = "testuser@example.com",
+                    Email = "testuser@example.com",
+                    ProblemSetId = null, // Maybe needs to be a number, idk why though?
+
+                };
+                testUser.Id = "test-user-id";
+                testUser.ProblemSet = p;
+                testUser.ProblemSetId = 2;
+
+                context.Add(testUser);
+            
+            
+            }
+            
+
             context.Add(p);
         };
 
