@@ -26,9 +26,6 @@ namespace Repleet.Contracts
         Dictionary<string, int> Data
         )
     {
-        public static implicit operator ProblemSetProgressResponseDTO(Dictionary<string, int> v)
-        {
-            throw new NotImplementedException();
-        }
+        
     }
 }

@@ -10,7 +10,7 @@ namespace Repleet.Services
 
     public class CompletedProblemsSource
     {
-        public Dictionary<string, List<SkillQuestionPair>> CompletedProblemsDictionary;
+        
 
         public CompletedProblemsSource()
         { }

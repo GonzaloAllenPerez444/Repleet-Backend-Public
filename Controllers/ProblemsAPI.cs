@@ -36,10 +36,11 @@ namespace Repleet.Controllers
         public async Task<IActionResult> SubmitRatings(RatingRequestDTO sliderValuesRequest)
 
         {
-            var y = User.Identity;
-            var matchingIdentity = User.FindFirst(ClaimTypes.NameIdentifier);
 
+            //Get User that's pinging the endpoint
             var userIdBefore = User.FindFirst(ClaimTypes.NameIdentifier).Value;
+            
+            
 
 
             // Fetch the user from the database
@@ -48,7 +49,7 @@ namespace Repleet.Controllers
                 .FirstOrDefaultAsync(u => u.Id == userIdBefore);
 
 
-            int? problemSetIDBefore = userBefore.ProblemSetId; // Get the current user's problemSetID
+            int? problemSetIDBefore = userBefore.ProblemSetId; // Get the current user's problemSetID to see if they've created one yet
 
             if (problemSetIDBefore != null) { return new JsonResult(Ok("Problem Already Exists For User")); }
 
@@ -62,7 +63,8 @@ namespace Repleet.Controllers
                                             .ToList();
 
 
-            ProblemSet defaultProblemSet = DefaultData.GetDefaultProblemSet(); //should be a new problemset instance each time.
+            ProblemSet defaultProblemSet = DefaultData.GetDefaultProblemSet(); 
+
             for (int i = 0; i < defaultProblemSet.Categories.Count; i++)
             {
                 defaultProblemSet.Categories[i].CurrentSkill = (SkillLevel)ratings[i];
@@ -78,11 +80,10 @@ namespace Repleet.Controllers
 
             await dbContext.SaveChangesAsync();
 
-            //Get User that's pinging the endpoint
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            
 
             // Find the user and update their ProblemSetID
-            var userFromDB = await dbContext.Users.FindAsync(userId);
+            var userFromDB = await dbContext.Users.FindAsync(userIdBefore);
 
             userFromDB.ProblemSetId = defaultProblemSet.ProblemSetId;
 
@@ -115,7 +116,11 @@ namespace Repleet.Controllers
 
             int? problemSetID = user.ProblemSetId; // Get the current user's problemSetID
 
-            //TODO ADD TESTS FOR IF IT'S NULL
+            if (problemSetID == null)
+            {
+                return  new JsonResult(Ok("Problem Set Not Found"));
+
+            }
 
             //just grab problemSet from DB with both it's categories and problems
             var MyProblemSet = await dbContext.ProblemSets
@@ -214,7 +219,12 @@ namespace Repleet.Controllers
 
             int? problemSetID = user.ProblemSetId; // Get the current user's problemSetID
 
-            //TODO ADD TESTS FOR IF IT'S NULL
+            if (problemSetID == null)
+            {
+                return new JsonResult(Ok("Problem Set Not Found"));
+
+            }
+
 
             //just grab problemSet from DB with both it's categories and problems
             var MyProblemSet = await dbContext.ProblemSets

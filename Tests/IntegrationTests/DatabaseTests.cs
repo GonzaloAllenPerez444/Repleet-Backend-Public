@@ -54,7 +54,7 @@ namespace Repleet.Tests.IntegrationTests
 
                 RatingRequestDTO request = new RatingRequestDTO("5,3,3,3,3,1,1,1,1,1,2,2,2,2,2,4,4,5");
 
-                //Create New User in DB with nothing
+                
                 
                 
 
@@ -78,8 +78,7 @@ namespace Repleet.Tests.IntegrationTests
 
 
 
-                //Do I need to add the initial user in the dbcontext or something
-
+                //Add the initial user in the dbcontext 
                 var response = await _httpClient.PostAsJsonAsync("/api/ProblemsAPI/submitratings", request);
 
                 response.EnsureSuccessStatusCode();
