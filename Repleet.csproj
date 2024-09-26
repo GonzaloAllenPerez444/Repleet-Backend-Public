@@ -7,6 +7,7 @@
     <UserSecretsId>aspnet-Repleet-4e758ab7-a921-43cc-9d58-2b718ab694d1</UserSecretsId>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <DockerfileContext>.</DockerfileContext>
+    <DockerComposeProjectPath>..\docker-compose.dcproj</DockerComposeProjectPath>
   </PropertyGroup>
 
   <ItemGroup>
@@ -663,7 +664,6 @@
     <None Include="bin\Debug\net8.0\zh-Hant\Microsoft.VisualStudio.TestPlatform.Common.resources.dll" />
     <None Include="bin\Debug\net8.0\zh-Hant\Microsoft.VisualStudio.TestPlatform.ObjectModel.resources.dll" />
     <None Include="nuget.config" />
-    <None Include="Repleet.sln" />
   </ItemGroup>
 
   <ItemGroup>
