@@ -96,7 +96,7 @@ namespace Repleet.Services
             Problem matchingProblem = matchingCategory.Problems.Where(p => p.Title == ProblemName).FirstOrDefault(); //should be reference to object, not value 
             Debug.Assert(matchingProblem != null, "Problem Name does not match in category");
 
-            matchingProblem.CompletionDate = DateTime.Now;
+            matchingProblem.CompletionDate = DateTime.UtcNow;
 
 
 

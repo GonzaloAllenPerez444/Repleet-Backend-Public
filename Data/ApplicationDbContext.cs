@@ -6,27 +6,28 @@ using Repleet.Models.Entities;
 
 namespace Repleet.Data
 {
-    public class ApplicationDbContext : IdentityDbContext<ApplicationUser> //used to be just plain DbContext
+    public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options): DbContext(options)  //:IdentityDbContext<ApplicationUser> //used to be just plain DbContext
 
     {
+
+
+        public DbSet<ApplicationUser> Users { get; set; }
         public DbSet<Problem> Problems { get; set; }
         public DbSet<Category> Categories { get; set; }
         public DbSet<ProblemSet> ProblemSets { get; set; }
 
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> optionsBuilder)
-            : base(optionsBuilder)
-        {
+        //public ApplicationDbContext(DbContextOptions<ApplicationDbContext> optionsBuilder)
+        //    : base(optionsBuilder)
+        //{
             
-        }
+        //}
     
-        
-
-
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
+            modelBuilder.Entity<ApplicationUser>().HasKey(x => x.Id);
 
             modelBuilder.Entity<ApplicationUser>()
             .HasOne(u => u.ProblemSet)
@@ -49,7 +50,7 @@ namespace Repleet.Data
                 .WithOne()
                 .HasForeignKey("ProblemSetId"); //this part is just for clarity
 
-            modelBuilder.HasDefaultSchema("identity");
+            //modelBuilder.HasDefaultSchema("identity");
                 
 
            

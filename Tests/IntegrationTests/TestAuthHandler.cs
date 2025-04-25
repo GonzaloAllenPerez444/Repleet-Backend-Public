@@ -15,13 +15,26 @@ namespace Repleet.Tests.IntegrationTests
 
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
         {
+
+            Guid userId;
+
+            if (Request.Headers["X-Test-UserId"].FirstOrDefault() == null) { userId = Guid.Parse("00000000-0000-0000-0000-00000000abcd"); }
+
+            else { userId = Guid.Parse(Request.Headers["X-Test-UserId"].FirstOrDefault()); };
+            
+
+
+
+
             var claims = new[]
         {
-            new Claim(ClaimTypes.NameIdentifier, "test-user-id"),
+            new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
             new Claim(ClaimTypes.Name, "testuser@example.com"),
             new Claim(ClaimTypes.Email, "testuser@example.com"),          
             
         };
+
+            
 
             var identity = new ClaimsIdentity(claims,"Test");
             var principal = new ClaimsPrincipal(identity);

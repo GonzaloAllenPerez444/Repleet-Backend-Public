@@ -1,4 +1,5 @@
 ﻿using Azure;
+using Docker.DotNet.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +13,7 @@ using Repleet.Models.Entities;
 using Repleet.Services;
 using System.Net;
 using System.Security.Claims;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
@@ -21,19 +23,23 @@ using JsonException = Newtonsoft.Json.JsonException;
 
 namespace Repleet.Tests.IntegrationTests
 {
-    public class ControllerTests : IClassFixture<RepleetApplicationFactory<Program>>
+    public class ControllerTests : IClassFixture<RepleetApplicationFactory>
     {
         //Test the Create, Read, Update, and Delete operations for each entity to ensure they interact correctly with the database.
-        private readonly RepleetApplicationFactory<Program> _factory;
+        private readonly RepleetApplicationFactory _factory;
         private HttpClient _httpClient;
 
-        public ControllerTests(RepleetApplicationFactory<Program> factory)
+        public ControllerTests(RepleetApplicationFactory factory)
         {
             _factory = factory;
             _httpClient = _factory.CreateClient(new WebApplicationFactoryClientOptions
             {
                 AllowAutoRedirect = false
             });
+
+
+
+
 
         }
 
@@ -48,27 +54,20 @@ namespace Repleet.Tests.IntegrationTests
                 var db = scopedServices.GetRequiredService<ApplicationDbContext>();
                 
                 db.Database.EnsureCreated();
-               // db.Database.Migrate();
-               //^this would apply all the migrations of the project, which isn't necessary since i just want it from the schema.
-               
+                
 
                 RatingRequestDTO request = new RatingRequestDTO("5,3,3,3,3,1,1,1,1,1,2,2,2,2,2,4,4,5");
-
-                
-                
-                
 
                 // Create a new user
                 var testUser = new ApplicationUser
                 {
-                    UserName = "testuser@example.com",
-                    Email = "testuser@example.com",
-                    ProblemSetId = null, // Maybe needs to be a number, idk why though?
+                    Username = "testuser@example.com",
+                    ProblemSetId = null,
                    
                 };
-                testUser.Id = "test-user-id";
+                testUser.Id = Guid.Parse("00000000-0000-0000-0000-00000000abcd");
 
-                // Use the PasswordHasher to hash the password
+                
                 var passwordHasher = new PasswordHasher<ApplicationUser>();
                 testUser.PasswordHash = passwordHasher.HashPassword(testUser, "TestPassword123!");
 
@@ -104,14 +103,13 @@ namespace Repleet.Tests.IntegrationTests
 
 
         }
-        [Fact]
-        public async Task Improper_Ratings_Handles_Error() { }
 
         [Fact]
         public async Task Get_Next_Problem_Returns_Problem_in_DB() {
+            int TEST_NUMBER = 0;
 
             //make sure that this next problem is correct, pretty straightforward getter.
-            
+
             using (var scope = _factory.Services.CreateScope())
             {
 
@@ -121,27 +119,21 @@ namespace Repleet.Tests.IntegrationTests
 
                 db.Database.EnsureCreated();
                 
-                SeedDatabase.InitializeTestDB(db);
-                //this creates problemSets with ID 1,2,3 and User with PsetId 2 and problemSet linked to 2
+                SeedDatabase seeded = new SeedDatabase(db);
+                await seeded.SeedAsync();
+
+                var users = db.Users.ToList();
+               
+                var chosenUser = users[TEST_NUMBER];
 
 
-                //"Users" doesn't seem to have the stuff though, lets try adding it here too.
-                // Create a new user
-                var testUser = new ApplicationUser
-                {
-                    UserName = "testuser@example.com",
-                    Email = "testuser@example.com",
-                    ProblemSetId = null, // Maybe needs to be a number, idk why though?
+                //Inject USERS in the request
 
-                };
-                testUser.Id = "test-user-id";
-                testUser.ProblemSetId = 2;
-                // Add the user to the context and save changes
-                db.Users.Add(testUser);
-                db.SaveChanges();
+                var request = new HttpRequestMessage(HttpMethod.Get, "/api/ProblemsAPI/getnextproblem");
+                request.Headers.Add("X-Test-UserId", chosenUser.Id.ToString());
 
 
-                var response = await _httpClient.GetAsync("/api/ProblemsAPI/getnextproblem");
+                var response = await _httpClient.SendAsync(request);
 
                 response.EnsureSuccessStatusCode();
 
@@ -157,7 +149,7 @@ namespace Repleet.Tests.IntegrationTests
 
         
         [Fact]
-        public async Task Get_Next_Problem_With_Invalid_ID_Handles_Error() {
+        public async Task Get_Next_Problem_With_Invalid_User_Handles_Error() {
 
             using (var scope = _factory.Services.CreateScope())
             {
@@ -168,19 +160,22 @@ namespace Repleet.Tests.IntegrationTests
 
                 db.Database.EnsureDeleted();
                 db.Database.EnsureCreated(); //this should delete any existing data in the db and replace it with a blank db
-                //"Users" doesn't seem to have the stuff though, lets try adding it here too.
-                // Create a new user
+                
+
                 var testUser = new ApplicationUser
                 {
-                    UserName = "testuser@example.com",
+                    Username = "testuser@example.com",
                     Email = "testuser@example.com",
-                    ProblemSetId = null, // Maybe needs to be a number, idk why though?
+                    ProblemSetId = null, // this is meant to be an improper ID
 
                 };
-                testUser.Id = "test-user-id";
-                
+                testUser.Id = Guid.Parse("00000000-0000-0000-0000-00000000abcd");
+                var passwordHasher = new PasswordHasher<ApplicationUser>();
+                testUser.PasswordHash = passwordHasher.HashPassword(testUser, "Test123!");
+
                 // Add the user to the context and save changes
                 db.Users.Add(testUser);
+                
                 db.SaveChanges();
 
                 var response = await _httpClient.GetAsync("/api/ProblemsAPI/getnextproblem");
@@ -193,9 +188,6 @@ namespace Repleet.Tests.IntegrationTests
                 // Check that the result contains the expected message
                 var message = result.GetProperty("value").GetString();
                 Assert.Equal("Problem Set Not Found", message);
-
-
-
 
             };
             }
@@ -218,12 +210,16 @@ namespace Repleet.Tests.IntegrationTests
                 // Create a new user
                 var testUser = new ApplicationUser
                 {
-                    UserName = "testuser@example.com",
+                    Username = "testuser@example.com",
                     Email = "testuser@example.com",
                     ProblemSetId = null, // Maybe needs to be a number, idk why though?
 
                 };
-                testUser.Id = "test-user-id";
+                testUser.Id = Guid.Parse("00000000-0000-0000-0000-00000000abcd");
+                
+                var passwordHasher = new PasswordHasher<ApplicationUser>();
+                testUser.PasswordHash = passwordHasher.HashPassword(testUser, "Test123!");
+
                 // Add the user to the context and save changes
                 db.Users.Add(testUser);
                 db.SaveChanges();
@@ -247,8 +243,10 @@ namespace Repleet.Tests.IntegrationTests
         }
 
         [Fact]
-        public async Task Submit_Problem_Correctly_Updates_Database() {
-            
+        public async Task Submit_Problem_Correctly_Updates_Database()
+        {
+            int TEST_NUMBER = 2;
+
             using (var scope = _factory.Services.CreateScope())
             {
 
@@ -258,32 +256,36 @@ namespace Repleet.Tests.IntegrationTests
 
                 db.Database.EnsureCreated();
 
-                SeedDatabase.InitializeTestDB(db);
+                SeedDatabase seeded = new SeedDatabase(db);
+                await seeded.SeedAsync();
 
-                SubmitProblemRequestDTO request = new SubmitProblemRequestDTO( "Car Fleet", "Stack", SkillLevel.lacking);
+                var users = db.Users.ToList();
+               
+                var chosenUser = users[TEST_NUMBER];
 
-                // Create a new user
-                var testUser = new ApplicationUser
+                // Create the DTO
+                SubmitProblemRequestDTO requestDTO = new SubmitProblemRequestDTO("Car Fleet", "Stack", SkillLevel.lacking);
+
+                // Serialize the DTO
+                var json = System.Text.Json.JsonSerializer.Serialize(requestDTO);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                // Create the request
+                var request = new HttpRequestMessage(HttpMethod.Post, "/api/ProblemsAPI/submitproblem")
                 {
-                    UserName = "testuser@example.com",
-                    Email = "testuser@example.com",
-                    ProblemSetId = null, // Maybe needs to be a number, idk why though?
-
+                    Content = content
                 };
-                testUser.Id = "test-user-id";
-                testUser.ProblemSetId = 2;
-                // Add the user to the context and save changes
-                db.Users.Add(testUser);
-                db.SaveChanges();
 
-
-                var response = await _httpClient.PostAsJsonAsync<SubmitProblemRequestDTO>("/api/ProblemsAPI/submitproblem", request);
+                // Add custom header
+                request.Headers.Add("X-Test-UserId", chosenUser.Id.ToString());
+                // var response = await _httpClient.PostAsJsonAsync<SubmitProblemRequestDTO>("/api/ProblemsAPI/submitproblem", request);
+                var response = await _httpClient.SendAsync(request);
 
                 response.EnsureSuccessStatusCode();
 
                 if (response.IsSuccessStatusCode)
                 {
-                    
+
 
                     var responseString = await response.Content.ReadAsStringAsync();
                     JsonElement result = System.Text.Json.JsonSerializer.Deserialize<JsonElement>(responseString);
@@ -296,7 +298,7 @@ namespace Repleet.Tests.IntegrationTests
 
 
 
-                    
+
 
                 }
                 //clean up
@@ -309,7 +311,10 @@ namespace Repleet.Tests.IntegrationTests
 
         }
 
-        //TODO Integration Test for GetCategoryProcess
+        //TODO Tests for GetCategoryProgress
+
+        
+        
 
 
 

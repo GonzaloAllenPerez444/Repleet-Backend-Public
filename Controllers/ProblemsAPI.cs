@@ -38,7 +38,7 @@ namespace Repleet.Controllers
         {
 
             //Get User that's pinging the endpoint
-            var userIdBefore = User.FindFirst(ClaimTypes.NameIdentifier).Value;
+            Guid userIdBefore = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
             
             
 
@@ -57,6 +57,8 @@ namespace Repleet.Controllers
             //ok now that we've confirmed they don't already have a PS, let's make them one.
 
             string sliderValues = sliderValuesRequest.RatingList;
+
+            
 
             System.Collections.Generic.List<int> ratings = sliderValues.Split(',')
                                             .Select(int.Parse)
@@ -103,7 +105,7 @@ namespace Repleet.Controllers
 
         {
 
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
 
 
             // Fetch the user from the database
@@ -113,6 +115,7 @@ namespace Repleet.Controllers
                 .Include(u => u.ProblemSet) // Include the ProblemSet to avoid a second query
                 .FirstOrDefaultAsync(u => u.Id == userId);
 
+            if (user == null) { return new JsonResult(Ok("User Not Found")); }
 
             int? problemSetID = user.ProblemSetId; // Get the current user's problemSetID
 
@@ -153,7 +156,7 @@ namespace Repleet.Controllers
         public async Task<IActionResult> SubmitProblem(SubmitProblemRequestDTO SPR)
         {
 
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            Guid userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
 
 
             // Fetch the user from the database
@@ -208,7 +211,7 @@ namespace Repleet.Controllers
          */
         public async Task<IActionResult> GetCategoryProgress()
         {
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            Guid userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
 
 
             // Fetch the user from the database

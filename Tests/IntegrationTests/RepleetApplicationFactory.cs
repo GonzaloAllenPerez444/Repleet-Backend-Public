@@ -7,110 +7,97 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Repleet.Data;
+using Testcontainers.PostgreSql;
 using System.Data.Common;
+using Xunit;
 
 namespace Repleet.Tests.IntegrationTests
 {
-    public class RepleetApplicationFactory<IProgram> : WebApplicationFactory<IProgram> where IProgram : class
+    public class RepleetApplicationFactory : WebApplicationFactory<Program>, IAsyncLifetime
+        
     {
 
-        /* This commented out part is if I would like to switch to use an actual docker mysql db for the integration tests
-         * Functionally, i don't think there is a significant enough reason to go this far for this application just yet.
-         * 
-         * protected override void ConfigureWebHost(IWebHostBuilder builder)
+        private PostgreSqlContainer _postgresContainer = new PostgreSqlBuilder()
+                .WithImage("postgres:latest")
+                .WithDatabase("testdb")
+                .WithUsername("testuser")
+                .WithPassword("testpassword")
+                .WithCleanUp(true)
+                .Build();
+
+        public Task InitializeAsync() {
+            return _postgresContainer.StartAsync();
+        }
+
+        public Task DisposeAsync()
         {
-
-            
-
-            builder.UseContentRoot("D:/RepleetProject/Repleet");
+            return _postgresContainer.StopAsync();
+        }
 
 
-            builder.ConfigureTestServices(services => {
 
-
-                services.RemoveAll(typeof(DbContextOptions<ApplicationDbContext>));
-
-                var ConnString = GetConnectionString();
-
-                services.AddSqlServer<ApplicationDbContext>(ConnString);
-
-                var MyDBContext = CreateDbContext(services);
-
-                MyDBContext.Database.EnsureDeleted(); 
-                
-
-                
-
-            });
-            
-        } */
-
-        //using in memory db (note that it still uses same dbcontext)
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
 
             base.ConfigureWebHost(builder);
 
-            builder.UseContentRoot("D:/RepleetProject/Repleet");
+           var currentDirectory = Directory.GetCurrentDirectory();
+           builder.UseContentRoot(Path.Combine(Directory.GetCurrentDirectory(), "../../../")); //TODO, see how to get around contentRoot
+            // ../../../
 
-            
 
 
             builder.ConfigureTestServices(services => {
 
-                
+                // Ensure container is initialized before configuring services
+                if (_postgresContainer == null)
+                {
+                    throw new InvalidOperationException("PostgreSQL container has not been initialized.");
+                }
+
 
                 var dbContextDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<ApplicationDbContext>));
 
 
-                services.Remove(dbContextDescriptor);
+                if (dbContextDescriptor != null)
+                {
+                    services.Remove(dbContextDescriptor);
+                }
 
                 var dbConnectionDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbConnection));
 
-                services.Remove(dbConnectionDescriptor);
-
-                services.AddSingleton<DbConnection>(container =>
+                if (dbConnectionDescriptor != null)
                 {
-                    var connection = new SqliteConnection("DataSource=:memory:");
-                    connection.Open();
-                    return connection;
-                
-                });
+                    services.Remove(dbConnectionDescriptor);
+                }
 
-                services.AddAuthentication("TestScheme").AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(
-                    "TestScheme", options => { });
+
+                
 
                 services.AddDbContext<ApplicationDbContext>((container,options) =>
                 { 
-                    var connection = container.GetRequiredService<DbConnection>();
-                    options.UseSqlite(connection);
+                    
+                    options.UseNpgsql(_postgresContainer.GetConnectionString());
                 });
-
+                
+                services.AddAuthentication(
+                    
+                    options =>
+                    {
+                        options.DefaultAuthenticateScheme = "TestScheme";
+                        options.DefaultChallengeScheme = "TestScheme";
+                    }
+                    
+                    ).AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(
+                    "TestScheme", options => { });
 
             });
 
-            builder.UseEnvironment("Development");
+           // builder.UseEnvironment("Development");
 
         }
 
-        //for use with actual db only
-        /*
-        private static string? GetConnectionString()
-        {
-            var configuration = new ConfigurationBuilder().AddUserSecrets<RepleetApplicationFactory>().Build();
-
-            var ConnString = configuration.GetConnectionString("DefaultConnectionTests");
-            return ConnString;
-        }
-
-        //for use with actual db only
-        private static ApplicationDbContext CreateDbContext(IServiceCollection services) {
         
-            var serviceProvider = services.BuildServiceProvider();
-            var scope = serviceProvider.CreateScope();
-            var MyDBContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            return MyDBContext;
-        }*/
     }
     
 }

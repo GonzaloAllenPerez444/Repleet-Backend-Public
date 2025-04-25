@@ -8,6 +8,12 @@ using Repleet.Data;
 using Repleet.Models.Entities;
 using Swashbuckle.AspNetCore.Filters;
 using System.Security.Claims;
+using Npgsql;
+using Repleet.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using Repleet.Contracts;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,30 +27,102 @@ var builder = WebApplication.CreateBuilder(args);
 //var connectionString = $"Data Source={DBHost};Initial Catalog={DBName};User ID=sa;Password={DBPassword};TrustServerCertificate=true" ?? throw new InvalidOperationException("Connection String Incorrect");
 
 //AZURE SETUP STARTS HERE, this should inject proper variables for both publishing and development
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+// SQL SERVER (not using anymore) var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+String? connectionString = null;
+
+//This should get all configuration from user secrets / environmental variables
+builder.Services.Configure<AppConfiguration>(builder.Configuration);
+
+
+// Only add Swagger in Development
+
+if (builder.Environment.IsDevelopment())
+{
+    connectionString = builder.Configuration.GetConnectionString("PostgreSQLConnection");
+    
+
+    builder.Services.AddSwaggerGen(options =>
+    {
+        options.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
+        {
+            In = ParameterLocation.Header,
+            Name = "Authorization",
+            Type = SecuritySchemeType.ApiKey,
+        });
+
+        options.SwaggerDoc("v1", new OpenApiInfo { Title = "Repleet API", Version = "v1" });
+        options.OperationFilter<SecurityRequirementsOperationFilter>();
+    });
+
+    builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
+    // Configure logging - only in development
+    builder.Logging.ClearProviders();
+    builder.Logging.AddConsole();
+    builder.Logging.AddDebug();
+}
+
+//production features
+else {
+
+    //TODO - refactor connectionString to use environmental variable
+
+   connectionString = builder.Configuration.GetConnectionString("PostgreSQLConnection");
+
+    
+
+}
+
+
 
 
 
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(connectionString, sqlOptions =>
+    //previous sql server options.UseSqlServer(connectionString, sqlOptions
+
+    options.UseNpgsql(connectionString, npgsqlOptions =>
 
     {
-        sqlOptions.EnableRetryOnFailure(
-            maxRetryCount: 10,   // Maximum retry attempts
-            maxRetryDelay: TimeSpan.FromSeconds(5),  // Delay between retries
-            errorNumbersToAdd: null // Optional: specify SQL error numbers to handle
-        );
+        npgsqlOptions.EnableRetryOnFailure(
+                maxRetryCount: 10,   // Maximum retry attempts
+                maxRetryDelay: TimeSpan.FromSeconds(5), // Delay between retries
+                errorCodesToAdd: null // Optional: specify PostgreSQL error codes to handle
+            );
+
     }
     ));
 
 
 
-builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
+builder.Services.AddScoped<IAuthService, AuthService>();
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    var config = builder.Configuration;
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+
+        ValidIssuer = config["AppSettings:Issuer"],
+        ValidAudience = config["AppSettings:Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(config["AppSettings:Token"]!))
+    };
+});
+
 
 builder.Services.AddAuthorization();
 
-builder.Services.AddIdentityApiEndpoints<ApplicationUser>().AddEntityFrameworkStores<ApplicationDbContext>();
 
 builder.Services.ConfigureApplicationCookie(options =>
 {
@@ -58,45 +136,49 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
 
-// Only add Swagger in Development
-/*if (builder.Environment.IsDevelopment())
+var allowedOrigins = builder.Configuration
+    .GetSection("Cors:AllowedOrigins")
+    .Get<string[]>();
+if (allowedOrigins != null)
 {
-    builder.Services.AddSwaggerGen(options =>
+    builder.Services.AddCors(options =>
     {
-        options.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
-        {
-           In = ParameterLocation.Header,
-            Name = "Authorization",
-            Type = SecuritySchemeType.ApiKey,
-        });
+        options.AddPolicy("AllowSpecificOrigins",
+            policy =>
+            {// Define allowed origins for both dev and prod -> could make into env vars later
 
-        options.SwaggerDoc("v1", new OpenApiInfo { Title = "Repleet API", Version = "v1" });
-        options.OperationFilter<SecurityRequirementsOperationFilter>();
+                if (builder.Environment.IsDevelopment())
+                {
+                    policy.WithOrigins(allowedOrigins)
+                          //policy.AllowAnyOrigin()               
+                          .AllowAnyHeader()
+                          .AllowAnyMethod()
+                          .AllowCredentials(); // Allow Cookies or JWT
+                }
+                else
+                {
+
+                    //JWT TOKENS! TODO
+                    //policy.WithOrigins(allowedOrigins)
+                    //.WithHeaders("Content-Type", "Authorization")
+                    //.WithMethods("GET", "POST");
+
+                    //Current Policy (Cookies)
+                    policy.WithOrigins(allowedOrigins)
+                    .WithHeaders("Content-Type", "Authorization") // whitelist only necessary headers
+                    .WithMethods("GET", "POST", "PUT", "DELETE")  // only what your API needs
+                    .AllowCredentials(); // Only if you're using cookies/auth
+
+                }
+            });
+
+
     });
-} */
-
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowSpecificOrigins",
-        policy =>
-        {// Define allowed origins for both dev and prod -> could make into env vars later
-            policy.WithOrigins("http://127.0.0.1:4173", "https://127.0.0.1:4173", "https://repleetfrontend.onrender.com", "http://localhost:5173", "https://localhost:5173", "https://repleet-frontend.vercel.app", "https://repleet-frontend.vercel.app/")
-                                
-             //policy.AllowAnyOrigin()               
-                  .AllowAnyHeader()  
-                  .AllowAnyMethod()
-                  .AllowCredentials(); // Allow Cookies or JWT
-        });
-
-    
-});
+};//end cors
 
 
 
-// Configure logging - only in development
-//builder.Logging.ClearProviders();
-//builder.Logging.AddConsole();
-//builder.Logging.AddDebug();
+
 
 
 
@@ -108,19 +190,6 @@ app.UseRouting();
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 
-app.MapIdentityApi<ApplicationUser>();
-
-app.MapPost("/logout", async (SignInManager<ApplicationUser> signInManager ) =>
-{
-    await signInManager.SignOutAsync();
-    return Results.Ok();
-}).RequireAuthorization();
-
-app.MapGet("/pingauth", (ClaimsPrincipal user) =>
-{
-    var email = user.FindFirstValue(ClaimTypes.Email); //get user email from claim
-    return Results.Json(new { Email = email }); //return that email as plain text response.
-}).RequireAuthorization();
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -129,22 +198,20 @@ app.UseAuthorization();
 if (app.Environment.IsDevelopment())
 {
 
-     //app.UseMigrationsEndPoint();//check for migrarion errors in production
-   //app.UseSwagger();
+     app.UseMigrationsEndPoint();//check for migrarion errors in production
+     app.UseSwagger();
     
-   //app.UseSwaggerUI(c =>
-   // {
-         //  c.SwaggerEndpoint("/swagger/v1/swagger.json", "Repleet API V1");
-         //  c.RoutePrefix = string.Empty;
-        //});
-        var a = 1;
+     app.UseSwaggerUI(c =>
+     {
+         c.SwaggerEndpoint("/swagger/v1/swagger.json", "Repleet API V1");
+         c.RoutePrefix = string.Empty;
+     });
+        
 
 }
 else
 {
-    app.UseExceptionHandler("/Home/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-    app.UseHsts();
+    
 }
 
 

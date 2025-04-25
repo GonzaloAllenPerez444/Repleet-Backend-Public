@@ -45,9 +45,5 @@ namespace Repleet.Models.Entities
 
 
     }
-    public class ApplicationUser : IdentityUser
-    {
-        public int? ProblemSetId { get; set; }
-        public ProblemSet ProblemSet { get; set; }
-    }
+    
 }
